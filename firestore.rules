@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Every bride/customer record. Any signed-in staff member (owner,
+    // reception, workshop...) can read and write — this app is a single
+    // shared boutique workspace, not multi-tenant, so there is no per-user
+    // ownership check here. Tighten this later with a `staff/{uid}` role
+    // doc if you need per-role restrictions (see README).
+    match /customers/{customerId} {
+      allow read, write: if signedIn();
+    }
+
+    // App-wide settings: theme colors, dashboard card visibility, the
+    // dress-code counter.
+    match /settings/{docId} {
+      allow read, write: if signedIn();
+    }
+
+    // Cached AI review results. Only the Cloud Function (Admin SDK, which
+    // bypasses these rules entirely) writes here — clients only read, so a
+    // buggy or malicious client can never forge alerts.
+    match /system/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+  }
+}
